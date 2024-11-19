@@ -1,0 +1,28 @@
+.container{
+    min-width: 100vw;
+    min-height: 100vh;
+}
+.logo{
+    height: 256px;
+    margin: 16px;
+    background-image: url("https://prod.cloud.rockstargames.com/crews/sc/8810/27903817/publish/emblem/emblem_256.png");
+    background-position: center;
+    background-size: cover;
+
+}
+.trigger {
+    padding: 0 24px;
+    font-size: 18px;
+    line-height: 64px;
+    cursor: pointer;
+    transition: color 0.3s;
+}
+
+.trigger:hover {
+    color: #1890ff;
+}
+.title{
+    font-family: Montserrat, serif;
+    font-size: 30px;
+    font-weight: bolder;
+}
