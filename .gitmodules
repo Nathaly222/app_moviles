@@ -1,0 +1,3 @@
+[submodule "proyecto-piano/proyecto"]
+	path = proyecto-piano/proyecto
+	url = https://github.com/Nathaly222/app_moviles/proyecto-piano/proyecto.git
