@@ -1,12 +1,11 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
-import Keyboard from './components/Keyboard';
+import React from "react";
+import { StyleSheet, View } from "react-native";
+import Piano from "./components/Recorder";
 
 export default function App() {
   return (
     <View style={styles.container}>
-      <Keyboard/>
-      <StatusBar style="auto" />
+      <Piano />
     </View>
   );
 }
@@ -14,8 +13,8 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#A3D9A5",
   },
 });
