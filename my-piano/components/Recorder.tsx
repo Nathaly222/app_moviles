@@ -1,14 +1,17 @@
-import React, { useState, useEffect } from "react";
-import { View, StyleSheet, Button, Text, ScrollView, TouchableOpacity } from "react-native";
-import { Audio } from "expo-av";
+import React, { useState, useEffect, useCallback } from "react";
+import { View, StyleSheet, Text, TouchableOpacity, Alert, FlatList } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import Keyboard from "./Keyboard";  // Este componente maneja las teclas del piano
+import { FontAwesome } from '@expo/vector-icons';
+import { Audio } from 'expo-av';
+import Keyboard from "./Keyboard";
 
+// Define the type for recordings
 interface NoteRecord {
   note: string;
   time: number;
 }
 
+// Sound mapping 
 const soundMapping: { [key: string]: any } = {
   C4: require("../assets/sounds/C4.mp3"),
   D4: require("../assets/sounds/D4.mp3"),
@@ -30,109 +33,242 @@ export default function Piano() {
   const [startTimestamp, setStartTimestamp] = useState<number | null>(null);
   const [savedRecordings, setSavedRecordings] = useState<NoteRecord[][]>([]);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [soundObjects, setSoundObjects] = useState<{ [key: string]: Audio.Sound }>({});
 
+  // Preload sounds when component mounts
   useEffect(() => {
-    const configureAudio = async () => {
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: false,
-        playsInSilentModeIOS: true,
-      });
+    const loadSounds = async () => {
+      try {
+        const loadedSounds: { [key: string]: Audio.Sound } = {};
+        for (const [note, soundSource] of Object.entries(soundMapping)) {
+          const { sound } = await Audio.Sound.createAsync(soundSource);
+          loadedSounds[note] = sound;
+        }
+        setSoundObjects(loadedSounds);
+      } catch (error) {
+        console.error("Error preloading sounds:", error);
+      }
     };
+
+    const configureAudio = async () => {
+      try {
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: false,
+          playsInSilentModeIOS: true,
+        });
+        
+        // Load saved recordings
+        const savedData = await AsyncStorage.getItem("savedRecordings");
+        if (savedData) {
+          setSavedRecordings(JSON.parse(savedData));
+        }
+      } catch (error) {
+        console.error("Error initializing audio:", error);
+      }
+    };
+
+    loadSounds();
     configureAudio();
+
+    // Clean up sounds when component unmounts
+    return () => {
+      Object.values(soundObjects).forEach(sound => sound.unloadAsync());
+    };
   }, []);
+
+  const playSound = useCallback(async (note: string) => {
+    try {
+      const sound = soundObjects[note];
+      if (sound) {
+        await sound.replayAsync();
+      } else {
+        console.warn(`No sound found for note: ${note}`);
+      }
+    } catch (error) {
+      console.error(`Error playing sound for ${note}:`, error);
+    }
+  }, [soundObjects]);
 
   const handleKeyPress = (note: string) => {
     const currentTime = Date.now();
     if (isRecording && startTimestamp !== null) {
       const time = currentTime - startTimestamp;
       setRecording((prev) => [...prev, { note, time }]);
-    }
-  };
-
-  const startRecording = () => {
-    setIsRecording(true);
-    setRecording([]);
-    setStartTimestamp(Date.now());
-  };
-
-  const stopRecording = () => {
-    setIsRecording(false);
-  };
-
-  const saveRecording = async () => {
-    const updatedRecordings = [...savedRecordings, recording];
-    await AsyncStorage.setItem("savedRecordings", JSON.stringify(updatedRecordings));
-    setSavedRecordings(updatedRecordings);
-  };
-
-  const playSound = async (note: string) => {
-    try {
-      const { sound } = await Audio.Sound.createAsync(soundMapping[note]);
-      await sound.playAsync();
-      sound.setOnPlaybackStatusUpdate((status) => {
-        if (status.isLoaded && status.didJustFinish) {
-          sound.unloadAsync();
-        }
-      });
-    } catch (error) {
-      console.error("Error al reproducir el sonido:", error);
+      playSound(note);
+    } else {
+      playSound(note);
     }
   };
 
   const playRecording = async (recordingToPlay: NoteRecord[]) => {
-    let lastTime = 0;
-    for (const { note, time } of recordingToPlay) {
-      const delay = time - lastTime;
-      await new Promise((resolve) => setTimeout(resolve, delay));
-      await playSound(note);
-      lastTime = time;
+    if (isPlaying || recordingToPlay.length === 0) return;
+    
+    setIsPlaying(true);
+    try {
+      let lastTime = 0;
+      for (const { note, time } of recordingToPlay) {
+        const delay = time - lastTime;
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        await playSound(note);
+        lastTime = time;
+      }
+    } catch (error) {
+      console.error("Playback error:", error);
+    } finally {
+      setIsPlaying(false);
     }
   };
 
-  const handlePlayback = async (index: number) => {
-    if (isPlaying) return;
-    setIsPlaying(true);
-    const selectedRecording = savedRecordings[index];
-    await playRecording(selectedRecording);
-    setIsPlaying(false);
+  const saveRecording = async () => {
+    if (recording.length === 0) {
+      Alert.alert("No Recording", "There is no recording to save");
+      return;
+    }
+
+    try {
+      const updatedRecordings = [...savedRecordings, recording];
+      await AsyncStorage.setItem("savedRecordings", JSON.stringify(updatedRecordings));
+      setSavedRecordings(updatedRecordings);
+      Alert.alert("Success", "Recording saved successfully");
+    } catch (error) {
+      console.error("Error saving recording:", error);
+      Alert.alert("Save Error", "Could not save the recording");
+    }
+  };
+
+  const toggleRecording = () => {
+    setIsRecording((prev) => !prev);
+    
+    if (isRecording) {
+      console.log("Recording saved:", recording);
+      if (recording.length > 0) {
+        saveRecording();
+      }
+      setRecording([]);
+      setStartTimestamp(null);
+    } else {
+      // Start recording
+      setStartTimestamp(Date.now());
+    }
+  };
+
+  const handlePlaybackClick = (index: number) => {
+    playRecording(savedRecordings[index]);
   };
 
   return (
     <View style={styles.container}>
-      <Button
-        title={isRecording ? "Stop Recording" : "Start Recording"}
-        onPress={isRecording ? stopRecording : startRecording}
-      />
-      <Button
-        title="Save Recording"
-        onPress={saveRecording}
-        disabled={recording.length === 0}
-      />
-      <Button
-        title="Play Recording"
-        onPress={() => playRecording(recording)}
-        disabled={recording.length === 0}
+      <Text style={styles.title}>Virtual Piano</Text>
+      <View style={styles.controls}>
+        <TouchableOpacity 
+          style={[
+            styles.button, 
+            { backgroundColor: isRecording ? "#d9534f" : "#5bc0de" }
+          ]}
+          onPress={toggleRecording}
+        >
+          <View style={styles.buttonContent}>
+            <FontAwesome name={isRecording ? "stop" : "play"} size={20} color="white" />
+            <Text style={styles.buttonText}>
+              {isRecording ? "Stop Recording" : "Start Recording"}
+            </Text>
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[
+            styles.button, 
+            { backgroundColor: "#5cb85c" },
+            recording.length === 0 && styles.disabledButton
+          ]}
+          onPress={saveRecording}
+          disabled={recording.length === 0}
+        >
+          <View style={styles.buttonContent}>
+            <FontAwesome name="save" size={20} color="white" />
+            <Text style={styles.buttonText}>Save Recording</Text>
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[
+            styles.button, 
+            { backgroundColor: "#428bca" },
+            (recording.length === 0 || isPlaying) && styles.disabledButton
+          ]}
+          onPress={() => playRecording(recording)}
+          disabled={recording.length === 0 || isPlaying}
+        >
+          <View style={styles.buttonContent}>
+            <FontAwesome name="play-circle" size={20} color="white" />
+            <Text style={styles.buttonText}>Play Recording</Text>
+          </View>
+        </TouchableOpacity>
+      </View>
+
+      <FlatList
+        data={savedRecordings}
+        keyExtractor={(item, index) => index.toString()}
+        renderItem={({ item, index }) => (
+          <TouchableOpacity onPress={() => handlePlaybackClick(index)} style={styles.recordingItem}>
+            <Text style={styles.recordingText}>Recording {index + 1}</Text>
+          </TouchableOpacity>
+        )}
+        style={styles.recordingList}
       />
       
-      {/* Renderiza el componente Keyboard */}
       <Keyboard onKeyPress={handleKeyPress} />
-
-      <ScrollView>
-        <Text style={styles.savedRecordingsTitle}>Saved Recordings:</Text>
-        {savedRecordings.map((_, index) => (
-          <TouchableOpacity key={index} onPress={() => handlePlayback(index)}>
-            <View style={styles.recordingItem}>
-              <Text>{`Recording ${index + 1}`}</Text>
-            </View>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", alignItems: "center" },
-  savedRecordingsTitle: { fontSize: 18, marginTop: 20 },
-  recordingItem: { marginTop: 10, padding: 10, backgroundColor: "#f0f0f0", width: 250, textAlign: "center" },
+  container: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#f7f7f7",
+    padding: 20,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: "bold",
+    marginBottom: 20,
+  },
+  controls: {
+    flexDirection: "row",
+    marginBottom: 20,
+    justifyContent: "space-around",
+    width: "100%",
+  },
+  button: {
+    borderRadius: 5,
+  },
+  buttonContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 10,
+    gap: 10,
+  },
+  buttonText: {
+    color: "white",
+    fontWeight: "bold",
+  },
+  disabledButton: {
+    opacity: 0.5,
+  },
+  recordingList: {
+    marginTop: 20,
+    width: "100%",
+  },
+  recordingItem: {
+    padding: 10,
+    backgroundColor: "#e9ecef",
+    marginBottom: 5,
+    borderRadius: 5,
+  },
+  recordingText: {
+    fontSize: 16,
+    color: "#333",
+  },
 });
