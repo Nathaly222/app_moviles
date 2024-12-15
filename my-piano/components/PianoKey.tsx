@@ -16,11 +16,11 @@ const soundMapping: { [key: string]: any } = {
   G4: require("../assets/sounds/G4.mp3"),
   A4: require("../assets/sounds/A4.wav"),
   B4: require("../assets/sounds/B4.wav"),
-  "C#4": require("../assets/sounds/C#4.mp3"),
-  "D#4": require("../assets/sounds/D#4.mp3"),
-  "F#4": require("../assets/sounds/F#4.mp3"),
-  "G#4": require("../assets/sounds/G#4.mp3"),
-  "A#4": require("../assets/sounds/A#4.mp3"),
+  "C4Sharp": require("../assets/sounds/C4Sharp.mp3"),
+  "D4Sharp": require("../assets/sounds/D4Sharp.mp3"),
+  "F4Sharp": require("../assets/sounds/F4Sharp.mp3"),
+  "G4Sharp": require("../assets/sounds/G4Sharp.mp3"),
+  "A4Sharp": require("../assets/sounds/A4Sharp.mp3"),
 };
 
 const PianoKey: React.FC<PianoKeyProps> = ({ note, onPress, type }) => {

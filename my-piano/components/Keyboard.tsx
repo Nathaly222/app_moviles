@@ -3,7 +3,7 @@ import { View, StyleSheet } from "react-native";
 import PianoKey from "./PianoKey";
 
 const WHITE_NOTES = ["C4", "D4", "E4", "F4", "G4", "A4", "B4"];
-const BLACK_NOTES = ["C#4", "D#4", "", "F#4", "G#4", "A#4", ""]; // Las teclas negras están en los lugares correctos
+const BLACK_NOTES = ["C4Sharp", "D4Sharp", "", "F4Sharp", "G4Sharp", "A4Sharp", ""]; // Las teclas negras están en los lugares correctos
 
 interface KeyboardProps {
   onKeyPress: (note: string) => void;
