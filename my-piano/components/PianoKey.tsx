@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { TouchableOpacity, Text, StyleSheet, Animated } from "react-native";
+import React, { useState, useEffect } from "react";
+import { TouchableOpacity, Text, StyleSheet } from "react-native";
 import { Audio, AVPlaybackStatusSuccess } from "expo-av";
 
 interface PianoKeyProps {
@@ -27,25 +27,49 @@ const PianoKey: React.FC<PianoKeyProps> = ({ note, onPress, type }) => {
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [pressed, setPressed] = useState(false);
 
-  const playSound = async () => {
-    try {
-      if (!sound) {
+  // Cargar sonido solo una vez al montar el componente
+  useEffect(() => {
+    const loadSound = async () => {
+      try {
         const { sound: newSound } = await Audio.Sound.createAsync(soundMapping[note]);
         setSound(newSound);
-        await newSound.playAsync();
 
         newSound.setOnPlaybackStatusUpdate((status) => {
           if (status && (status as AVPlaybackStatusSuccess).didJustFinish) {
             newSound.unloadAsync();
           }
         });
-      } else {
-        await sound.playAsync();
+      } catch (error) {
+        console.error("Error al cargar el sonido:", error);
       }
-    } catch (error) {
-      console.error("Error al reproducir el sonido:", error);
+    };
+
+    loadSound();
+
+    return () => {
+      if (sound) {
+        sound.unloadAsync(); // Limpiar cuando el componente se desmonte
+      }
+    };
+  }, [note]);
+
+  const playSound = async () => {
+    if (sound) {
+      const status = await sound.getStatusAsync();
+      if (status.isLoaded) {
+        try {
+          await sound.playAsync();
+        } catch (error) {
+          console.error("Error al reproducir el sonido:", error);
+        }
+      } else {
+        console.warn("El sonido no está completamente cargado.");
+      }
+    } else {
+      console.warn("El sonido no está inicializado.");
     }
   };
+  
 
   const handlePress = () => {
     setPressed(true);
@@ -102,4 +126,5 @@ const styles = StyleSheet.create({
     backgroundColor: "#aaa",
   },
 });
+
 export default PianoKey;

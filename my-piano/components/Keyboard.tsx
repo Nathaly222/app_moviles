@@ -1,9 +1,11 @@
 import React from "react";
-import { View, StyleSheet } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import PianoKey from "./PianoKey";
 
 const WHITE_NOTES = ["C4", "D4", "E4", "F4", "G4", "A4", "B4"];
-const BLACK_NOTES = ["C4Sharp", "D4Sharp", "", "F4Sharp", "G4Sharp", "A4Sharp", ""]; // Las teclas negras están en los lugares correctos
+const WHITE_LABELS = ["Do", "Re", "Mi", "Fa", "Sol", "La", "Si"];
+const BLACK_NOTES = ["C4Sharp", "D4Sharp", "", "F4Sharp", "G4Sharp", "A4Sharp", ""];
+const BLACK_LABELS = ["Do#", "Re#", "", "Fa#", "Sol#", "La#", ""];
 
 interface KeyboardProps {
   onKeyPress: (note: string) => void;
@@ -11,24 +13,44 @@ interface KeyboardProps {
 
 export default function Keyboard({ onKeyPress }: KeyboardProps) {
   return (
-    <View style={styles.keyboard}>
-      {WHITE_NOTES.map((note, index) => (
-        <View style={styles.noteGroup} key={index}>
-          <PianoKey note={note} onPress={onKeyPress} type="white" />
-          {BLACK_NOTES[index] && (
-            <PianoKey note={BLACK_NOTES[index]} onPress={onKeyPress} type="black" />
-          )}
+    <View style={styles.container}>
+      <View style={styles.controlsContainer}>
+        <View style={styles.controlButton}>
+          <Text style={styles.controlText}>Start/Stop Recording</Text>
         </View>
-      ))}
+        <View style={styles.controlButton}>
+          <Text style={styles.controlText}>Save</Text>
+        </View>
+        <View style={styles.controlButton}>
+          <Text style={styles.controlText}>Play</Text>
+        </View>
+        <View style={styles.controlButton}>
+          <Text style={styles.controlText}>Replays</Text>
+        </View>
+      </View>
+      <View style={styles.keyboardContainer}>
+        {WHITE_NOTES.map((note, index) => (
+          <View key={index} style={styles.noteGroup}>
+            <PianoKey note={note} onPress={onKeyPress} type="white" />
+            <Text style={styles.whiteLabel}>{WHITE_LABELS[index]}</Text>
+            {BLACK_NOTES[index] && (
+              <View style={styles.blackKeyWrapper}>
+                <PianoKey note={BLACK_NOTES[index]} onPress={onKeyPress} type="black" />
+                <Text style={styles.blackLabel}>{BLACK_LABELS[index]}</Text>
+              </View>
+            )}
+          </View>
+        ))}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  keyboard: {
+  container: {
     flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "flex-end",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
     padding: 16,
     backgroundColor: "#f5f5f5",
     borderRadius: 10,
@@ -38,8 +60,46 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 5,
   },
+  keyboardContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "flex-end",
+  },
   noteGroup: {
     position: "relative",
     width: 50,
+    alignItems: "center",
+  },
+  blackKeyWrapper: {
+    position: "absolute",
+    top: 0,
+    zIndex: 1,
+    alignItems: "center",
+  },
+  whiteLabel: {
+    marginTop: 8,
+    fontSize: 12,
+    color: "#000",
+  },
+  blackLabel: {
+    position: "absolute",
+    top: 40,
+    fontSize: 10,
+    color: "#fff",
+  },
+  controlsContainer: {
+    justifyContent: "flex-start",
+    marginRight: 20,
+  },
+  controlButton: {
+    padding: 10,
+    backgroundColor: "#428bca",
+    borderRadius: 5,
+    marginBottom: 10,
+    alignItems: "center",
+  },
+  controlText: {
+    color: "white",
+    fontSize: 16,
   },
 });
